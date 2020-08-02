@@ -55,6 +55,8 @@ if [ "$SUPERSET_LOAD_EXAMPLES" = "yes" ]; then
     echo_step "3" "Complete" "Loading examples"
 fi
 
+superset import_datasources -p /app/data_sources.yaml
+
 # Create default roles and permissions
 echo_step "4" "Starting" "Setting up roles and perms"
 superset init

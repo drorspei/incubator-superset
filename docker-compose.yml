@@ -22,6 +22,7 @@ x-superset-build: &superset-build
 x-superset-depends-on: &superset-depends-on
   - db
   - redis
+  - drill
 x-superset-volumes: &superset-volumes
   # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
   - ./docker/docker-init.sh:/app/docker-init.sh
@@ -32,6 +33,17 @@ x-superset-volumes: &superset-volumes
 
 version: "3.7"
 services:
+  drill:
+    image: apache/drill:1.17.0
+    container_name: drill
+    ports: 
+      - "127.0.0.1:8047:8047"
+      - "127.0.0.1:31010:31010"
+    volumes:
+      - /tmp:/tmp/dror
+    stdin_open: true
+    env_file: docker/.env
+
   redis:
     image: redis:3.2
     container_name: superset_cache

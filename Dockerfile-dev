@@ -28,4 +28,21 @@ RUN cd /app \
     && pip install --no-cache -r requirements.txt -r requirements-dev.txt \
     && pip install --no-cache -r requirements-extra.txt \
     && pip install --no-cache -r requirements-local.txt || true
+
+RUN apt update -y\
+        && apt install -y build-essential libssl-dev libffi-dev python3-dev python3-pip rpm2cpio cpio unixodbc-dev wget libgssapi-krb5-2
+
+RUN cd / \
+        && wget http://package.mapr.com/tools/MapR-ODBC/MapR_Drill/MapRDrill_odbc_v1.3.22.1055/maprdrill-1.3.22.1055-1.x86_64.rpm \
+        && rpm2cpio maprdrill-1.3.22.1055-1.x86_64.rpm | cpio -idmv && rm ./maprdrill-1.3.22.1055-1.x86_64.rpm
+
+RUN pip install pyodbc
+RUN pip install --ignore-installed git+https://github.com/drorspei/sqlalchemy-drill.git
+
+COPY odbc.ini /home/superset/.odbc.ini
+COPY odbcinst.ini /etc/odbcinst.ini
+COPY data_sources.yaml /app/data_sources.yaml
+
+RUN cd /app
+
 USER superset

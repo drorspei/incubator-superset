@@ -35,6 +35,14 @@ COPY ./requirements.txt /app/
 RUN cd /app \
         && pip install --no-cache -r requirements.txt
 
+RUN apt update -y\
+        && apt install -y build-essential libssl-dev libffi-dev python-dev python3-pip rpm2cpio cpio unixodbc-dev wget libgssapi-krb5-2 \
+        && pip install --ignore-installed git+https://github.com/JohnOmernik/sqlalchemy-drill.git pyodbc
+
+RUN cd / \
+        && wget http://package.mapr.com/tools/MapR-ODBC/MapR_Drill/MapRDrill_odbc_v1.3.22.1055/maprdrill-1.3.22.1055-1.x86_64.rpm \
+        && rpm2cpio maprdrill-1.3.22.1055-1.x86_64.rpm | cpio -idmv && rm ./maprdrill-1.3.22.1055-1.x86_64.rpm
+
 
 ######################################################################
 # Node stage to deal with static asset construction
@@ -82,11 +90,13 @@ RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash supers
             build-essential \
             default-libmysqlclient-dev \
             libpq-dev \
+            libssl-dev libffi-dev python-dev unixodbc-dev libgssapi-krb5-2 \
         && rm -rf /var/lib/apt/lists/*
 
 COPY --from=superset-py /usr/local/lib/python3.6/site-packages/ /usr/local/lib/python3.6/site-packages/
 # Copying site-packages doesn't move the CLIs, so let's copy them one by one
 COPY --from=superset-py /usr/local/bin/gunicorn /usr/local/bin/celery /usr/local/bin/flask /usr/bin/
+COPY --from=superset-py /opt/mapr /opt/mapr
 COPY --from=superset-node /app/superset/static/assets /app/superset/static/assets
 COPY --from=superset-node /app/superset-frontend /app/superset-frontend
 
@@ -103,6 +113,9 @@ WORKDIR /app
 
 USER superset
 
+COPY odbc.ini /home/superset/.odbc.ini
+COPY odbcinst.ini /etc/odbcinst.ini
+
 HEALTHCHECK CMD ["curl", "-f", "http://localhost:8088/health"]
 
 EXPOSE ${SUPERSET_PORT}
@@ -112,16 +125,16 @@ ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 ######################################################################
 # Dev image...
 ######################################################################
-FROM lean AS dev
+# FROM lean AS dev
 
-COPY ./requirements* ./docker/requirements* /app/
+# COPY ./requirements* ./docker/requirements* /app/
 
-USER root
-# Cache everything for dev purposes...
-RUN cd /app \
-    && pip install --ignore-installed -e . \
-    && pip install --ignore-installed -r requirements.txt \
-    && pip install --ignore-installed -r requirements-dev.txt \
-    && pip install --ignore-installed -r requirements-extra.txt \
-    && pip install --ignore-installed -r requirements-local.txt || true
-USER superset
+# USER root
+# # Cache everything for dev purposes...
+# RUN cd /app \
+#     && pip install --ignore-installed -e . \
+#     && pip install --ignore-installed -r requirements.txt \
+#     && pip install --ignore-installed -r requirements-dev.txt \
+#     && pip install --ignore-installed -r requirements-extra.txt \
+#     && pip install --ignore-installed -r requirements-local.txt || true
+# USER superset
